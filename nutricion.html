@@ -1,0 +1,791 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NutriScan: Tu Guía de Etiquetas Saludables</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+          50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); }
+        }
+        .animate-bounce { animation: bounce 1s infinite; }
+    </style>
+    <!-- UMD Scripts for React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babel for JSX Transpilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/"
+  }
+}
+</script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div id="root"></div>
+    <script type="text/babel">
+// --- BUNDLED REACT APPLICATION (STANDALONE) ---
+
+// --- FROM types.ts ---
+const AppView = {
+  ANALYZER: 'analyzer',
+  GUIDE: 'guide',
+  CHATBOT: 'chatbot',
+};
+
+
+// --- FROM constants.tsx ---
+const NUTRIENT_DEFINITIONS = [
+    { id: 'calories', label: 'Calorías', unit: 'kcal', type: 'info', dailyValue: 2000, explanation: 'Las calorías proporcionan energía. El consumo excesivo puede llevar al sobrepeso. "Bajo en calorías" es 40 kcal o menos por porción.' },
+    { id: 'saturatedFat', label: 'Grasa Saturada', unit: 'g', type: 'limit', dailyValue: 20, explanation: 'Limitar su consumo es clave para reducir el riesgo de enfermedades cardiovasculares. Un %VD del 5% o menos es bajo.', scalable: true },
+    { id: 'transFat', label: 'Grasa Trans', unit: 'g', type: 'limit', explanation: 'Aumenta el colesterol "malo" (LDL). El objetivo es un consumo tan bajo como sea posible, idealmente 0g. No tiene %VD.' },
+    { id: 'cholesterol', label: 'Colesterol', unit: 'mg', type: 'limit', dailyValue: 300, explanation: 'El exceso puede acumularse en las arterias, aumentando el riesgo de enfermedades cardíacas. Un %VD del 5% o menos es bajo.' },
+    { id: 'sodium', label: 'Sodio', unit: 'mg', type: 'limit', dailyValue: 2300, explanation: 'Un alto consumo se asocia con la hipertensión arterial. Menos de 2,300 mg al día es la recomendación general. Para convertir a sal, multiplica los gramos de sodio por 2.5.' },
+    { id: 'addedSugars', label: 'Azúcares Añadidos', unit: 'g', type: 'limit', dailyValue: 50, explanation: 'Son azúcares que no se encuentran naturalmente en el alimento. Su consumo excesivo dificulta una dieta nutritiva. Un %VD del 10% o menos es el objetivo.', scalable: true },
+    { id: 'dietaryFiber', label: 'Fibra Dietética', unit: 'g', type: 'get-enough', dailyValue: 28, explanation: 'Promueve la salud digestiva y puede ayudar a reducir el colesterol. Un %VD del 20% o más es alto y beneficioso.', scalable: true },
+    { id: 'vitaminD', label: 'Vitamina D', unit: 'mcg', type: 'get-enough', dailyValue: 20, explanation: 'Esencial para la absorción de calcio y la salud ósea. Un %VD del 20% o más es alto.' },
+    { id: 'calcium', label: 'Calcio', unit: 'mg', type: 'get-enough', dailyValue: 1300, explanation: 'Fundamental para huesos y dientes fuertes, ayuda a prevenir la osteoporosis. Un %VD del 20% o más es alto.' },
+    { id: 'iron', label: 'Hierro', unit: 'mg', type: 'get-enough', dailyValue: 18, explanation: 'Previene la anemia y es crucial para el transporte de oxígeno en la sangre. Un %VD del 20% o más es alto.' },
+    { id: 'potassium', label: 'Potasio', unit: 'mg', type: 'get-enough', dailyValue: 4700, explanation: 'Ayuda a mantener una presión arterial saludable y el equilibrio de fluidos. Un %VD del 20% o más es alto.' },
+    { id: 'totalFat', label: 'Grasa Total', unit: 'g', type: 'info', dailyValue: 78, explanation: 'Incluye grasas saturadas, insaturadas y trans. Es una fuente importante de energía.', scalable: true },
+    { id: 'totalCarbohydrate', label: 'Carbohidratos Totales', unit: 'g', type: 'info', dailyValue: 275, explanation: 'La principal fuente de energía del cuerpo. Incluye azúcares, almidones y fibra.', scalable: true },
+    { id: 'totalSugars', label: 'Azúcares Totales', unit: 'g', type: 'info', explanation: 'Incluye azúcares naturales (como en la leche o frutas) y azúcares añadidos.' },
+    { id: 'protein', label: 'Proteína', unit: 'g', type: 'info', dailyValue: 50, explanation: 'Esencial para construir y reparar tejidos en el cuerpo.', scalable: true },
+];
+
+const INITIAL_NUTRITION_DATA = {
+    servingSize: '1 taza (228g)',
+    servingsPerContainer: '2',
+    calories: '',
+    totalFat: '',
+    saturatedFat: '',
+    transFat: '',
+    cholesterol: '',
+    sodium: '',
+    totalCarbohydrate: '',
+    dietaryFiber: '',
+    totalSugars: '',
+    addedSugars: '',
+    protein: '',
+    vitaminD: '',
+    calcium: '',
+    iron: '',
+    potassium: '',
+    ingredients: '',
+};
+
+const SUGAR_ALIASES = [
+    'azúcar', 'sacarosa', 'fructosa', 'glucosa', 'dextrosa', 'jarabe de maíz', 'miel', 'melaza',
+    'maltodextrina', 'azúcar de caña', 'azúcar invertido', 'concentrado de jugo de fruta', 'jarabe de malta'
+];
+
+const InfoIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-5 w-5"} viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+    </svg>
+);
+
+const WarningIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+);
+
+const CheckCircleIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+const BotIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.486 2 2 6.486 2 12v4.142c0 1.297.625 2.493 1.689 3.243A5.996 5.996 0 0010 23h4c2.206 0 4.16-1.519 4.311-3.615C19.375 18.635 20 17.439 20 16.142V12C20 6.486 15.514 2 12 2zM8.5 14c-.828 0-1.5-.672-1.5-1.5S7.672 11 8.5 11s1.5.672 1.5 1.5S9.328 14 8.5 14zm7 0c-.828 0-1.5-.672-1.5-1.5S14.672 11 15.5 11s1.5.672 1.5 1.5S16.328 14 15.5 14z" />
+    </svg>
+);
+
+const UserIcon = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6"} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+    </svg>
+);
+
+
+// --- FROM components/InfoModal.tsx ---
+const InfoModal = ({ isOpen, onClose, title, children }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4"
+            onClick={onClose}
+        >
+            <div 
+                className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-slate-800">{title}</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="text-slate-600">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- FROM components/GlobalGuide.tsx ---
+const AccordionItem = ({ title, children }) => {
+    const { useState } = React;
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="border-b border-slate-200">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex justify-between items-center p-4 text-left font-semibold text-slate-700 hover:bg-slate-100 transition"
+            >
+                <span>{title}</span>
+                <svg
+                    className={`w-5 h-5 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            {isOpen && <div className="p-4 bg-white">{children}</div>}
+        </div>
+    );
+};
+
+const GlobalGuide = () => {
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+            <h2 className="text-2xl font-bold mb-4 text-slate-800">Guía de Interpretación de Etiquetas</h2>
+            <p className="mb-6 text-slate-600">Aprende a decodificar las etiquetas nutricionales para tomar decisiones más saludables. Esta guía te ayudará a entender los conceptos clave.</p>
+            
+            <div className="rounded-lg border border-slate-200 overflow-hidden">
+                <AccordionItem title="El % Valor Diario (%VD)">
+                    <div className="space-y-3 text-slate-600">
+                        <p>El %VD te indica qué porcentaje de la cantidad diaria recomendada de un nutriente obtienes de una porción del alimento.</p>
+                        <p className="font-semibold">Regla general:</p>
+                        <ul className="list-disc list-inside pl-4 space-y-1">
+                            <li><strong className="text-amber-600">5% VD o menos se considera BAJO.</strong> Ideal para nutrientes que debes limitar (grasas saturadas, sodio, azúcares añadidos).</li>
+                            <li><strong className="text-emerald-600">20% VD o más se considera ALTO.</strong> Ideal para nutrientes que debes consumir más (fibra, vitaminas, minerales).</li>
+                        </ul>
+                        <p>Usa el %VD para comparar productos similares y equilibrar tu dieta a lo largo del día.</p>
+                    </div>
+                </AccordionItem>
+                <AccordionItem title="Lista de Ingredientes: La Clave Oculta">
+                     <div className="space-y-3 text-slate-600">
+                        <p>¡Siempre revisa la lista de ingredientes! Es una de las partes más importantes de la etiqueta.</p>
+                        <ul className="list-disc list-inside pl-4 space-y-1">
+                           <li><strong>Orden de Cantidad:</strong> Los ingredientes se listan en orden decreciente por peso. El primer ingrediente es el más abundante.</li>
+                           <li><strong>Calidad sobre Cantidad:</strong> Busca que los primeros ingredientes sean alimentos integrales (frutas, verduras, granos enteros). Evita productos donde el azúcar o las grasas refinadas estén al principio.</li>
+                           <li><strong>Menos es Más:</strong> Generalmente, una lista corta de ingredientes reconocibles es una buena señal.</li>
+                           <li><strong>Identifica Azúcares Ocultos:</strong> El azúcar tiene muchos nombres (jarabe, sacarosa, dextrosa, etc.). Nuestra herramienta de análisis te ayuda a identificarlos.</li>
+                        </ul>
+                    </div>
+                </AccordionItem>
+                 <AccordionItem title="Reclamos Frontales (Marketing)">
+                    <div className="space-y-3 text-slate-600">
+                        <p>Los fabricantes usan frases llamativas en el frente del paquete para vender. ¡No te fíes solo de ellas!</p>
+                        <ul className="list-disc list-inside pl-4 space-y-1">
+                           <li><strong>"Light" o "Ligero":</strong> Puede significar que tiene menos calorías, grasa o sodio, pero compáralo siempre con el producto original. A veces, para reducir la grasa, aumentan el azúcar.</li>
+                           <li><strong>"Bajo en Grasa":</strong> No significa "bajo en calorías". Revisa la tabla nutricional completa.</li>
+                           <li><strong>"Sin Azúcar Añadida":</strong> El producto puede contener azúcares naturales o edulcorantes artificiales.</li>
+                        </ul>
+                        <div className="flex items-start space-x-2 mt-4 p-3 bg-amber-50 rounded-lg">
+                           <InfoIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-1" />
+                           <p className="text-amber-800"><strong>Consejo:</strong> Ignora el marketing frontal y ve directo a la tabla de información nutricional y la lista de ingredientes para obtener la verdad.</p>
+                        </div>
+                    </div>
+                </AccordionItem>
+                 <AccordionItem title="Sistemas de Etiquetado Frontal (Global)">
+                    <div className="space-y-4 text-slate-600">
+                       <p>Diferentes países usan sistemas visuales para simplificar la elección. Estos son algunos ejemplos:</p>
+                        <div>
+                           <h4 className="font-semibold text-slate-700">Sellos de Advertencia (Octágonos Negros)</h4>
+                           <p className="text-sm">Usado en países como México y Chile. Advierten sobre excesos de nutrientes críticos.</p>
+                           <div className="mt-2 flex flex-wrap gap-2">
+                               <span className="bg-black text-white text-xs font-bold p-2 rounded">ALTO EN CALORÍAS</span>
+                               <span className="bg-black text-white text-xs font-bold p-2 rounded">ALTO EN AZÚCARES</span>
+                               <span className="bg-black text-white text-xs font-bold p-2 rounded">ALTO EN GRASAS SATURADAS</span>
+                           </div>
+                        </div>
+                         <div>
+                           <h4 className="font-semibold text-slate-700">Semáforo Nutricional</h4>
+                           <p className="text-sm">Usado en Reino Unido y Ecuador. Usa colores para indicar niveles altos, medios o bajos.</p>
+                           <div className="mt-2 flex items-center space-x-2">
+                               <span className="h-6 w-6 rounded-full bg-red-500" title="Alto"></span>
+                               <span className="h-6 w-6 rounded-full bg-amber-400" title="Medio"></span>
+                               <span className="h-6 w-6 rounded-full bg-emerald-500" title="Bajo"></span>
+                           </div>
+                        </div>
+                         <div>
+                           <h4 className="font-semibold text-slate-700">Nutri-Score</h4>
+                           <p className="text-sm">Usado en Francia y España. Califica los alimentos de la A (más saludable) a la E (menos saludable).</p>
+                           <div className="mt-2 flex items-center space-x-1">
+                                <span className="p-2 bg-green-700 text-white font-bold">A</span>
+                                <span className="p-2 bg-lime-500 text-white font-bold">B</span>
+                                <span className="p-2 bg-yellow-400 text-black font-bold">C</span>
+                                <span className="p-2 bg-orange-500 text-white font-bold">D</span>
+                                <span className="p-2 bg-red-600 text-white font-bold">E</span>
+                           </div>
+                        </div>
+                    </div>
+                </AccordionItem>
+                <AccordionItem title="Fechas de Caducidad y Consumo Preferente">
+                     <div className="space-y-3 text-slate-600">
+                        <p>Comprender las fechas es importante para la seguridad y la calidad.</p>
+                         <ul className="list-disc list-inside pl-4 space-y-2">
+                            <li><strong>Fecha de Caducidad:</strong> Es la fecha límite para consumir el producto de forma segura. Se usa en alimentos perecederos como carnes o lácteos. ¡No lo consumas después de esta fecha!</li>
+                            <li><strong>Fecha de Consumo Preferente (o "Best Before"):</strong> Indica la fecha hasta la cual el producto mantiene su calidad óptima (sabor, textura). Después de esta fecha, el producto puede ser seguro para comer, pero su calidad podría haber disminuido.</li>
+                        </ul>
+                    </div>
+                </AccordionItem>
+            </div>
+        </div>
+    );
+};
+
+// --- FROM components/Header.tsx ---
+const Header = () => {
+    return (
+        <header className="bg-white shadow-md">
+            <div className="max-w-4xl mx-auto py-6 px-4 md:px-8">
+                <div className="flex items-center space-x-3">
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1 15H9v-2h2v2zm0-4H9V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                    </svg>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
+                            NutriScan
+                        </h1>
+                        <p className="text-sm text-slate-500">Tu Guía de Etiquetas Saludables</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+    );
+};
+
+// --- FROM components/Tabs.tsx ---
+const Tabs = ({ activeView, setActiveView }) => {
+    const tabs = [
+        { id: AppView.ANALYZER, label: 'Analizador de Etiquetas' },
+        { id: AppView.GUIDE, label: 'Guía de Interpretación' },
+        { id: AppView.CHATBOT, label: 'Chatbot Nutricional' },
+    ];
+
+    const getTabClass = (tabId) => {
+        const baseClass = "flex-1 text-center py-3 px-2 text-sm md:text-base font-medium transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50";
+        if (activeView === tabId) {
+            return `${baseClass} bg-emerald-500 text-white rounded-md shadow`;
+        }
+        return `${baseClass} text-slate-600 hover:bg-slate-200 rounded-md`;
+    };
+
+    return (
+        <nav className="bg-slate-100 rounded-md p-1 flex space-x-1">
+            {tabs.map(tab => (
+                <button
+                    key={tab.id}
+                    onClick={() => setActiveView(tab.id)}
+                    className={getTabClass(tab.id)}
+                >
+                    {tab.label}
+                </button>
+            ))}
+        </nav>
+    );
+};
+
+
+// --- FROM components/NutrientDisplay.tsx ---
+const NutrientDisplay = ({ valuePerServing, definition, servingsConsumed, dailyCalorieGoal }) => {
+    const { useState, useMemo } = React;
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    
+    const { totalValue, percentDV, barColor, textColor } = useMemo(() => {
+        if (isNaN(valuePerServing)) {
+            return { totalValue: null, percentDV: null, barColor: 'bg-slate-300', textColor: 'text-slate-800' };
+        }
+
+        const standardDV = definition.dailyValue;
+        let adjustedDV = standardDV;
+
+        if (standardDV && definition.scalable) {
+            adjustedDV = (standardDV / 2000) * dailyCalorieGoal;
+        }
+
+        const totalValue = valuePerServing * servingsConsumed;
+        const percentDV = adjustedDV ? (totalValue / adjustedDV) * 100 : null;
+
+        let barColor = 'bg-slate-300';
+        let textColor = 'text-slate-800';
+        
+        if (percentDV !== null) {
+            if (definition.type === 'limit') {
+                if (percentDV <= 5) { barColor = 'bg-emerald-400'; textColor = 'text-emerald-800'; }
+                else if (percentDV > 20) { barColor = 'bg-red-400'; textColor = 'text-red-800'; }
+                else { barColor = 'bg-amber-400'; textColor = 'text-amber-800'; }
+            } else if (definition.type === 'get-enough') {
+                if (percentDV >= 20) { barColor = 'bg-emerald-400'; textColor = 'text-emerald-800'; }
+                else if (percentDV < 5) { barColor = 'bg-red-400'; textColor = 'text-red-800'; }
+                else { barColor = 'bg-amber-400'; textColor = 'text-amber-800'; }
+            }
+        }
+        return { totalValue, percentDV, barColor, textColor };
+    }, [valuePerServing, definition, servingsConsumed, dailyCalorieGoal]);
+    
+    if (totalValue === null) return null;
+
+    const adjustedDV = definition.dailyValue && definition.scalable ? (definition.dailyValue / 2000) * dailyCalorieGoal : definition.dailyValue;
+
+    return (
+        <div className="py-3 border-b border-slate-200 last:border-b-0">
+            <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                    <span className="font-semibold">{definition.label}</span>
+                    <button onClick={() => setIsModalOpen(true)} className="text-slate-400 hover:text-emerald-500">
+                        <InfoIcon className="h-4 w-4" />
+                    </button>
+                </div>
+                <div className={`font-bold ${textColor} text-right`}>
+                    {totalValue.toFixed(1)} {definition.unit}
+                    {percentDV !== null && ` / ${percentDV.toFixed(0)}% VD`}
+                </div>
+            </div>
+            {percentDV !== null && (
+                 <div className="w-full bg-slate-200 rounded-full h-2.5 mt-2">
+                    <div className={barColor} style={{ width: `${Math.min(percentDV, 100)}%`, height: '100%', borderRadius: 'inherit' }}></div>
+                </div>
+            )}
+            <InfoModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={definition.label}>
+                <p>{definition.explanation}</p>
+                 {adjustedDV && definition.dailyValue && adjustedDV !== definition.dailyValue && (
+                    <p className="text-xs mt-2 p-2 bg-slate-100 rounded-md">
+                        *Valor Diario ajustado a <strong className="font-semibold">{Math.round(adjustedDV)}{definition.unit}</strong> para tu meta de <strong className="font-semibold">{dailyCalorieGoal} kcal</strong> (el estándar es {definition.dailyValue}{definition.unit} para 2000 kcal).
+                    </p>
+                )}
+            </InfoModal>
+        </div>
+    );
+};
+
+
+// --- FROM components/LabelAnalyzer.tsx ---
+const InputModeSelector = ({ selectedMode, onSelectMode }) => {
+    const getButtonClass = (mode) => {
+        const base = "px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2";
+        if (mode === selectedMode) {
+            return `${base} bg-emerald-500 text-white shadow`;
+        }
+        return `${base} bg-white text-slate-700 hover:bg-slate-100 border border-slate-300`;
+    };
+
+    return (
+        <div className="flex items-center space-x-2 p-1 bg-slate-200 rounded-lg">
+            <button onClick={() => onSelectMode('per_serving')} className={getButtonClass('per_serving')}>
+                Por Porción
+            </button>
+            <button onClick={() => onSelectMode('per_100g')} className={getButtonClass('per_100g')}>
+                Por 100g / 100ml
+            </button>
+        </div>
+    );
+};
+
+
+const LabelAnalyzer = () => {
+    const { useState, useMemo, useCallback } = React;
+    const [data, setData] = useState(INITIAL_NUTRITION_DATA);
+    const [servings, setServings] = useState(1);
+    const [dailyCalorieGoal, setDailyCalorieGoal] = useState(2000);
+    const [inputMode, setInputMode] = useState('per_serving');
+    
+    const handleInputChange = (e) => {
+        setData({ ...data, [e.target.name]: e.target.value });
+    };
+
+    const handleServingsChange = (e) => {
+        const val = parseFloat(e.target.value);
+        setServings(val > 0 ? val : 1);
+    };
+
+    const handleCalorieGoalChange = (e) => {
+        const val = parseInt(e.target.value, 10);
+        setDailyCalorieGoal(val > 0 ? val : 2000);
+    };
+
+    const parseGrams = useCallback((servingSizeStr) => {
+        const match = servingSizeStr.match(/\((\s*\d+(\.\d+)?\s*)[gG]\)/);
+        if (match && match[1]) {
+            return parseFloat(match[1].trim());
+        }
+        const simpleMatch = servingSizeStr.match(/^(\d+(\.\d+)?)\s*g$/i);
+        if (simpleMatch && simpleMatch[1]) {
+            return parseFloat(simpleMatch[1].trim());
+        }
+        return null;
+    }, []);
+
+    const servingSizeInGrams = useMemo(() => parseGrams(data.servingSize), [data.servingSize, parseGrams]);
+    
+    const getNutrientValuePerServing = useCallback((nutrientId) => {
+        const rawValue = parseFloat(data[nutrientId]);
+        if (isNaN(rawValue)) return NaN;
+
+        if (inputMode === 'per_serving') {
+            return rawValue;
+        }
+
+        if (inputMode === 'per_100g') {
+            if (servingSizeInGrams) {
+                return (rawValue / 100) * servingSizeInGrams;
+            }
+            return NaN; // Indicate value cannot be calculated
+        }
+        return NaN;
+    }, [data, inputMode, servingSizeInGrams]);
+    
+    const highlightedIngredients = useMemo(() => {
+        if (!data.ingredients) return null;
+        const regex = new RegExp(`\\b(${SUGAR_ALIASES.join('|')})\\b`, 'gi');
+        return data.ingredients.replace(regex, '<mark class="bg-amber-200 rounded-sm px-1">$&</mark>');
+    }, [data.ingredients]);
+
+    const nutrientsToLimit = NUTRIENT_DEFINITIONS.filter(n => n.type === 'limit');
+    const nutrientsToGetEnough = NUTRIENT_DEFINITIONS.filter(n => n.type === 'get-enough');
+    const otherNutrients = NUTRIENT_DEFINITIONS.filter(n => n.type === 'info');
+
+    const caloriesPerServing = getNutrientValuePerServing('calories');
+
+    return (
+        <div className="space-y-8">
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h2 className="text-xl font-bold mb-4 text-slate-700">1. Ingresa los Datos de la Etiqueta</h2>
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-600 mb-2">¿Los valores que ingresarás son por porción o por 100g?</label>
+                    <InputModeSelector selectedMode={inputMode} onSelectMode={setInputMode} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-600 mb-1">Tamaño por Porción</label>
+                            <input type="text" name="servingSize" value={data.servingSize} onChange={handleInputChange} className="w-full p-2 border border-slate-300 rounded-md bg-white" placeholder="Ej: 1 taza (228g)"/>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-600 mb-1">Porciones por Envase</label>
+                            <input type="text" name="servingsPerContainer" value={data.servingsPerContainer} onChange={handleInputChange} className="w-full p-2 border border-slate-300 rounded-md bg-white" />
+                        </div>
+                    </div>
+
+                    {NUTRIENT_DEFINITIONS.map(def => (
+                        <div key={def.id}>
+                            <label className="block text-sm font-medium text-slate-600 mb-1">{def.label} ({def.unit || ''})</label>
+                            <input type="number" name={def.id} value={data[def.id]} onChange={handleInputChange} className="w-full p-2 border border-slate-300 rounded-md bg-white" placeholder="0" />
+                        </div>
+                    ))}
+                    
+                     <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-600 mb-1">Lista de Ingredientes</label>
+                        <textarea name="ingredients" value={data.ingredients} onChange={handleInputChange} rows={4} className="w-full p-2 border border-slate-300 rounded-md bg-white" placeholder="Ej: Harina integral, agua, jarabe de maíz, sal..."></textarea>
+                    </div>
+                </div>
+                 <div className="flex justify-end mt-4">
+                    <button onClick={() => setData(INITIAL_NUTRITION_DATA)} className="bg-slate-500 text-white px-4 py-2 rounded-md hover:bg-slate-600 transition">Limpiar Formulario</button>
+                </div>
+            </div>
+            {inputMode === 'per_100g' && !servingSizeInGrams && (
+                <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 rounded-r-lg" role="alert">
+                    <div className="flex">
+                        <InfoIcon className="h-5 w-5 mr-3"/>
+                        <div>
+                            <p className="font-bold">¡Atención!</p>
+                            <p className="text-sm">Para calcular los valores por porción, por favor ingresa el peso de la porción en gramos entre paréntesis en el campo "Tamaño por Porción". Ejemplo: <strong>1 taza (228g)</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h2 className="text-xl font-bold mb-4 text-slate-700">2. Análisis Nutricional Personalizado</h2>
+                
+                <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <div>
+                        <label htmlFor="servings-input" className="block text-base font-semibold text-slate-700 mb-2">¿Cuántas porciones consumirás?</label>
+                        <input id="servings-input" type="number" value={servings} onChange={handleServingsChange} min="0.5" step="0.5" className="w-full max-w-xs p-2 border border-slate-300 rounded-md text-lg bg-white" />
+                    </div>
+                     <div>
+                        <label htmlFor="calorie-goal-input" className="block text-base font-semibold text-slate-700 mb-2">Tu meta de calorías diarias (kcal)</label>
+                        <input id="calorie-goal-input" type="number" value={dailyCalorieGoal} onChange={handleCalorieGoalChange} min="1" step="50" className="w-full max-w-xs p-2 border border-slate-300 rounded-md text-lg bg-white" />
+                         <p className="text-xs text-slate-500 mt-1">El %VD se ajustará a tu meta. El estándar es 2000.</p>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="text-center bg-emerald-50 p-4 rounded-lg">
+                        <p className="text-lg text-emerald-800">Calorías por tu porción</p>
+                        <p className="text-4xl font-bold text-emerald-600">
+                           {(!isNaN(caloriesPerServing) && servings > 0) ? (caloriesPerServing * servings).toFixed(0) : '0'} kcal
+                        </p>
+                    </div>
+
+                    <div className="bg-amber-50 p-4 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-3">
+                            <WarningIcon className="h-6 w-6 text-amber-600" />
+                            <h3 className="text-lg font-semibold text-amber-800">Nutrientes a Limitar</h3>
+                        </div>
+                        {nutrientsToLimit.map(def => (
+                            <NutrientDisplay key={def.id} valuePerServing={getNutrientValuePerServing(def.id)} definition={def} servingsConsumed={servings} dailyCalorieGoal={dailyCalorieGoal} />
+                        ))}
+                    </div>
+
+                    <div className="bg-emerald-50 p-4 rounded-lg">
+                         <div className="flex items-center space-x-2 mb-3">
+                            <CheckCircleIcon className="h-6 w-6 text-emerald-600" />
+                            <h3 className="text-lg font-semibold text-emerald-800">Nutrientes a Consumir Más</h3>
+                        </div>
+                        {nutrientsToGetEnough.map(def => (
+                            <NutrientDisplay key={def.id} valuePerServing={getNutrientValuePerServing(def.id)} definition={def} servingsConsumed={servings} dailyCalorieGoal={dailyCalorieGoal} />
+                        ))}
+                    </div>
+
+                     <div className="bg-slate-100 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-slate-800 mb-3">Información Adicional</h3>
+                        {otherNutrients.filter(def => def.id !== 'calories').map(def => (
+                            <NutrientDisplay key={def.id} valuePerServing={getNutrientValuePerServing(def.id)} definition={def} servingsConsumed={servings} dailyCalorieGoal={dailyCalorieGoal} />
+                        ))}
+                    </div>
+
+                    {highlightedIngredients && (
+                        <div className="bg-slate-100 p-4 rounded-lg">
+                            <h3 className="text-lg font-semibold text-slate-800 mb-3">Análisis de Ingredientes</h3>
+                            <p className="text-sm text-slate-600 mb-2">Se han resaltado posibles azúcares añadidos. Recuerda que los ingredientes se listan de mayor a menor cantidad.</p>
+                            <div className="text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: highlightedIngredients }}></div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- FROM components/NutritionChatbot.tsx ---
+
+// Conectado a un proxy seguro de Google Apps Script
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxDEgyAwyniz50s6Nu8YDW319Awuqq8qVuRG45y1t5uafVsMQiPxeG0_5d2KHQHxafr/exec';
+
+const askChatbot = async (query, history) => {
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain', // Usar text/plain para evitar preflight CORS en Apps Script
+            },
+            body: JSON.stringify({ query, history }),
+            mode: 'cors' 
+        });
+
+        if (!response.ok) {
+            throw new Error(`Network response was not ok: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+            console.error("Error devuelto por Apps Script:", data.error);
+            return `Lo siento, ocurrió un error en el servidor: ${data.error}`;
+        }
+
+        return data.response;
+
+    } catch (error) {
+        console.error("Error al contactar el proxy de Apps Script:", error);
+        return "No se pudo conectar con el servicio de chat. Revisa la consola del navegador (F12) para más detalles y asegúrate que la URL del script es correcta y está implementada.";
+    }
+};
+
+const NutritionChatbot = () => {
+    const { useState, useRef, useEffect } = React;
+    const [messages, setMessages] = useState([
+        {
+            id: 1,
+            text: '¡Hola! Soy NutriBot. Pregúntame lo que quieras sobre nutrición y etiquetas. Por ejemplo: "¿Cuánta azúcar añadida debo consumir al día?"',
+            sender: 'bot',
+        }
+    ]);
+    const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const chatEndRef = useRef(null);
+
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isLoading]);
+
+    const handleSend = async () => {
+        if (!input.trim() || isLoading) return;
+        
+        const userMessage = { id: Date.now(), text: input, sender: 'user' };
+        const currentInput = input;
+        const currentMessages = [...messages, userMessage];
+        
+        setMessages(currentMessages);
+        setInput('');
+        setIsLoading(true);
+
+        try {
+            const botResponseText = await askChatbot(currentInput, currentMessages);
+            const botMessage = {
+                id: Date.now() + 1,
+                text: botResponseText,
+                sender: 'bot',
+            };
+            setMessages(prev => [...prev, botMessage]);
+        } catch (error) {
+            console.error("Error fetching chatbot response:", error);
+            const errorMessage = {
+                id: Date.now() + 1,
+                text: 'Lo siento, he tenido un problema al conectarme. Por favor, inténtalo de nuevo más tarde.',
+                sender: 'bot',
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const suggestedQuestions = [
+      "¿Qué es la grasa trans?",
+      "¿Es malo el sodio?",
+      "Diferencia entre azúcar total y añadida",
+      "¿Para qué sirve la fibra?"
+    ];
+
+    return (
+        <div className="bg-white rounded-lg shadow-sm flex flex-col" style={{height: '75vh'}}>
+            <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                {messages.map(msg => (
+                    <div key={msg.id} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
+                        {msg.sender === 'bot' && <BotIcon className="h-8 w-8 text-emerald-500 flex-shrink-0 mt-1" />}
+                        <div className={`max-w-md p-3 rounded-lg shadow-sm ${msg.sender === 'bot' ? 'bg-slate-100 text-slate-800' : 'bg-emerald-500 text-white'}`}>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                        </div>
+                        {msg.sender === 'user' && <UserIcon className="h-8 w-8 text-slate-400 flex-shrink-0 mt-1" />}
+                    </div>
+                ))}
+                 {isLoading && (
+                    <div className="flex items-start gap-3">
+                        <BotIcon className="h-8 w-8 text-emerald-500 flex-shrink-0 mt-1" />
+                        <div className="max-w-md p-3 rounded-lg bg-slate-100 text-slate-800 shadow-sm">
+                           <div className="flex items-center space-x-2">
+                                <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce"></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <div ref={chatEndRef}></div>
+            </div>
+            
+            <div className="p-4 border-t border-slate-200">
+              <div className="flex flex-wrap gap-2 mb-3">
+                {suggestedQuestions.map(q => (
+                  <button key={q} onClick={() => setInput(q)} className="text-xs bg-slate-200 text-slate-700 px-3 py-1 rounded-full hover:bg-slate-300 transition-colors">
+                    {q}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center space-x-2">
+                  <input
+                      type="text"
+                      value={input}
+                      onChange={e => setInput(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && handleSend()}
+                      placeholder="Escribe tu pregunta aquí..."
+                      className="flex-1 p-3 border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-400 transition"
+                      disabled={isLoading}
+                  />
+                  <button onClick={handleSend} disabled={isLoading || !input.trim()} className="bg-emerald-500 text-white rounded-full p-3 hover:bg-emerald-600 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                  </button>
+              </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- FROM App.tsx ---
+const App = () => {
+    const { useState } = React;
+    const [activeView, setActiveView] = useState(AppView.ANALYZER);
+
+    const renderView = () => {
+        switch (activeView) {
+            case AppView.ANALYZER:
+                return <LabelAnalyzer />;
+            case AppView.GUIDE:
+                return <GlobalGuide />;
+            case AppView.CHATBOT:
+                return <NutritionChatbot />;
+            default:
+                return <LabelAnalyzer />;
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-slate-50">
+            <Header />
+            <main className="p-4 md:p-8 max-w-4xl mx-auto">
+                <Tabs activeView={activeView} setActiveView={setActiveView} />
+                <div className="mt-6">
+                    {renderView()}
+                </div>
+            </main>
+             <footer className="text-center p-4 text-slate-500 text-sm">
+                <p>&copy; 2025 NutriScan. Creado para tomar decisiones informadas.</p>
+            </footer>
+        </div>
+    );
+};
+
+
+// --- FROM index.tsx (Mounting Logic) ---
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+    throw new Error("Could not find root element to mount to");
+}
+
+const root = ReactDOM.createRoot(rootElement);
+root.render(
+    <React.StrictMode>
+        <App />
+    </React.StrictMode>
+);
+
+    </script>
+</body>
+</html>
